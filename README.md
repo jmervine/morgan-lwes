@@ -40,10 +40,12 @@ morgan({ format: 'tiny', skip: function(req, res){ return res.statusCode === 304
 Morgan accepts these properties in the options object.
 
 - `format`    - Format string or Setting, see below for format tokens.
-- `emitter`   - Custom emitter, defaults to built in emitter.
-- `address`   - Address for built in emitter, defaults to '127.0.0.1'.
-- `port`      - Port for built in emitter, defaults to 1222.
-- `esf`       - Path on disk to ESF file, defaults to `undefined`.
+- `emitter`   - Custom emitter, defaults to built in emitter. (Mostly for testing.)
+- `lwes`      - Object containing lwes configurations for `new liblwes.Emitter(...)`.
+    - `type`    - Emitted `type` field, default `MorganLWES::Logger`.
+    - `address` - Address to emit on, default `127.0.0.1`.
+    - `port`    - Port to emit on, defaults to `1111`.
+    - `esf`     - Path on disk to ESF file, defaults to `undefined`.
 - `immediate` - Write log line on request instead of response (for response times).
 - `skip`      - Function to determine if logging is skipped, called as `skip(req, res)`, defaults to `false`.
 
@@ -83,3 +85,4 @@ Permission is hereby granted, free of charge, to any person obtaining a copy of 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+

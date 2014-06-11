@@ -4,7 +4,7 @@ var morgan  = require('..');
 var assert  = require('assert');
 var request = require('supertest');
 
-var lastEmit;
+var lastEmit, lastType;
 
 describe('logger()', function () {
     describe('compile()', function () {
@@ -395,9 +395,11 @@ function createLogger(opts) {
     if (typeof options === 'object' && !options.emitter) {
         options.emitter = {
             emit: function emit(message) {
-                lastEmit = message;
+                lastType = message.type;
+                lastEmit = message.attributes;
             }
         };
+        lastType = null;
         lastEmit = null;
     }
 

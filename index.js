@@ -14,7 +14,7 @@
  * Module dependencies.
  */
 
-var liblwes = require('liblwes');
+var Emitter = require('liblwes').Emitter;
 
 /**
  * Log requests with the given `options` or a `format` string.
@@ -47,17 +47,22 @@ exports = module.exports = function logger(options) {
 
   // options
 
-  var emitter = options.emitter;
-  if (!emitter) {
-      var emitOpts = {};
-      emitOpts.address = options.address || '127.0.0.1';
-      emitOpts.port    = options.port    || 1222; // TODO: verify default lwes port
+  var lwesOpts = options.lwes || {};
 
-      if (options.esf) {
-          emitOpts = options.esf;
-      }
-      emitter = new liblwes.Emitter(emitOpts);
+  // handle emitOpts default
+  var emitType = 'MorganLWES::Logger';
+  if (lwesOpts.type) {
+      emitType = lwesOpts.type;
+      delete lwesOpts.type;
   }
+
+  lwesOpts.address = lwesOpts.address || '127.0.0.1';
+  lwesOpts.port    = lwesOpts.port    || 1111;
+  lwesOpts.ttl     = lwesOpts.ttl     || 3;
+
+  // Mostly for testing, but can be used in passing an existing instance of
+  // liblwes.Emitter
+  emitter = options.emitter || new Emitter(lwesOpts);
 
   return function logger(req, res, next) {
     req._startAt       = process.hrtime();
@@ -70,7 +75,10 @@ exports = module.exports = function logger(options) {
       if (skip(req, res)) return;
       var message = fmt(exports, req, res);
       if (null == message) return;
-      emitter.emit(message);
+      emitter.emit({
+          type: emitType,
+          attributes: message
+      });
     };
 
     // immediate
