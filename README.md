@@ -8,15 +8,46 @@ Logging middleware for node.js http apps, which emits [LWES](http://www.lwes.org
 
 ```js
 var express = require('express');
-var morgan  = require('morgan-lwes');
+var emitter = require('morgan-lwes');
 
 var app = express();
-app.use(morgan());
+app.use(emitter());
 ```
 
-### morgan(options)
+##### Sample Event
 
-Morgan may be passed options to configure the tokens which are emitted. The options may be passed as a predefined list of tokens, token list, or function.
+This is a sample event when using the setup above.
+
+```
+{ type: 'MorganLWES::Logger',
+  attributes:
+   { status: '200',
+     referrer: '-',
+     user_agent: 'Mozilla/5.0 (Windows NT 5.1; rv:31.0) Gecko/20100101 Firefox/31.0',
+     response_time: '0.683',
+     response_content_length: '12',
+     method: 'GET',
+     remote_addr: '127.0.0.1',
+     date: 'Wed, 11 Jun 2014 23:00:37 GMT',
+     url: '/',
+     http_version: '1.1' } }
+{ type: 'MorganLWES::Logger',
+  attributes:
+   { status: '404',
+     referrer: '-',
+     user_agent: 'Mozilla/5.0 (Windows NT 5.1; rv:31.0) Gecko/20100101 Firefox/31.0',
+     response_time: '0.265',
+     response_content_length: '-',
+     method: 'GET',
+     remote_addr: '127.0.0.1',
+     date: 'Wed, 11 Jun 2014 23:00:37 GMT',
+     url: '/favicon.ico',
+     http_version: '1.1' } }
+```
+
+### options
+
+MorganLWES may be passed options to configure the tokens which are emitted. The options may be passed as a predefined list of tokens, token list, or function.
 
 ```js
 morgan() // default
@@ -37,7 +68,7 @@ morgan({ format: 'tiny', skip: function(req, res){ return res.statusCode === 304
 
 #### Options
 
-Morgan accepts these properties in the options object.
+MorganLWES accepts these properties in the options object.
 
 - `format`    - Format string or Setting, see below for format tokens.
 - `emitter`   - Custom emitter, defaults to built in emitter. (Mostly for testing.)
@@ -73,6 +104,10 @@ To define a token, simply invoke `morgan.token()` with the name and a callback f
 morgan.token('type', function(req, res){ return req.headers['content-type']; })
 ```
 
+
+### TODO
+
+  * Add `esf` examples for preformatted setting -- default, short and tiny.
 
 ## License
 
