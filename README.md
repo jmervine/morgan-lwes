@@ -1,32 +1,32 @@
-# morgan [![NPM version](https://badge.fury.io/js/morgan.svg)](http://badge.fury.io/js/morgan) [![Build Status](https://travis-ci.org/expressjs/morgan.svg)](https://travis-ci.org/expressjs/morgan) [![Coverage Status](https://img.shields.io/coveralls/expressjs/morgan.svg)](https://coveralls.io/r/expressjs/morgan)
+# morgan-lwes [![NPM version](https://badge.fury.io/js/morgan-lwes.svg)](http://badge.fury.io/js/morgan-lwes) [![Build Status](https://travis-ci.org/jmervine/morgan-lwes.svg)](https://travis-ci.org/jmervine/morgan-lwes)
 
-Logging middleware for node.js http apps.
+Logging middleware for node.js http apps, which emits [LWES](http://www.lwes.org) events instead of logging to disk.
 
-> Named after [Dexter](http://en.wikipedia.org/wiki/Dexter_Morgan), a show you should not watch until completion.
+> Based on as forked from [morgan](https://www.npmjs.org/package/morgan).
 
 ## API
 
 ```js
-var express = require('express')
-var morgan  = require('morgan')
+var express = require('express');
+var morgan  = require('morgan-lwes');
 
-var app = express()
-app.use(morgan())
+var app = express();
+app.use(morgan());
 ```
 
 ### morgan(options)
 
-Morgan may be passed options to configure the logging output. The options may be passed as a predefined format, formatting string, function, or object.
+Morgan may be passed options to configure the tokens which are emitted. The options may be passed as a predefined list of tokens, token list, or function.
 
 ```js
 morgan() // default
 morgan('short')
 morgan('tiny')
-morgan({ format: 'dev', immediate: true })
-morgan(':method :url - :referrer')
-morgan(':req[content-type] -> :res[content-type]')
-morgan(function(tokens, req, res){ return 'some format string' })
-morgan({ format: 'dev', skip: function(req, res){ return res.statusCode === 304; }})
+morgan({ format: 'short', immediate: true })
+morgan([':method', ':url', ':referrer'])
+morgan([':request[content-type]', ':response[content-type]'])
+morgan(function(tokens, req, res){ return { data: 'some format string', status: res.statusCode } });
+morgan({ format: 'tiny', skip: function(req, res){ return res.statusCode === 304; }});
 ```
 
 #### Predefined Formats
@@ -34,27 +34,28 @@ morgan({ format: 'dev', skip: function(req, res){ return res.statusCode === 304;
 - `default` - Standard output.
 - `short` - Shorter than default, also including response time.
 - `tiny` - The minimal.
-- `dev` - Concise output colored by response status for development use.
 
 #### Options
 
 Morgan accepts these properties in the options object.
 
-- `format` - Format string or Setting, see below for format tokens.
-- `stream` - Output stream, defaults to `stdout`.
-- `buffer` - Buffer duration, defaults to `1000 ms` when `true`.
+- `format`    - Format string or Setting, see below for format tokens.
+- `emitter`   - Custom emitter, defaults to built in emitter.
+- `address`   - Address for built in emitter, defaults to '127.0.0.1'.
+- `port`      - Port for built in emitter, defaults to 1222.
+- `esf`       - Path on disk to ESF file, defaults to `undefined`.
 - `immediate` - Write log line on request instead of response (for response times).
-- `skip` - Function to determine if logging is skipped, called as `skip(req, res)`, defaults to `false`.
+- `skip`      - Function to determine if logging is skipped, called as `skip(req, res)`, defaults to `false`.
 
 All default formats are defined this way, however the api is also public:
 ```js
-morgan.format('name', 'string or function')
+morgan.format('name', 'array or function')
 ```
 
 #### Tokens
 
-- `:req[header]` ex: `:req[Accept]`
-- `:res[header]` ex: `:res[Content-Length]`
+- `:request[header]` ex: `:request[Accept]`
+- `:response[header]` ex: `:response[Content-Length]`
 - `:http-version`
 - `:response-time`
 - `:remote-addr`
@@ -75,7 +76,7 @@ morgan.token('type', function(req, res){ return req.headers['content-type']; })
 
 The MIT License (MIT)
 
-Copyright (c) 2014 Jonathan Ong me@jongleberry.com
+Copyright (c) 2014 Joshua P. Mervine <joshua@mervine.net>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 

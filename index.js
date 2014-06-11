@@ -1,7 +1,12 @@
 /*!
- * Morgan | Connect - logger
- * Copyright(c) 2010 Sencha Inc.
- * Copyright(c) 2011 TJ Holowaychuk
+ * Morgan LWES | Express/Connect middleware logger using
+ * liblwes emitter for output over process.(stdout|stderr)
+ *
+ * Based on and forked from Morgan | Connect - logger
+ * - https://www.npmjs.org/package/morgan
+ * - https://github.com/expressjs/morgan
+ *
+ * Copyright(c) 2014 Joshua P. Mervine
  * MIT Licensed
  */
 
@@ -9,13 +14,7 @@
  * Module dependencies.
  */
 
-var bytes = require('bytes');
-
-/*!
- * Default log buffer duration.
- */
-
-var defaultBufferDuration = 1000;
+var liblwes = require('liblwes');
 
 /**
  * Log requests with the given `options` or a `format` string.
@@ -47,52 +46,31 @@ exports = module.exports = function logger(options) {
   if ('function' != typeof fmt) fmt = compile(fmt);
 
   // options
-  var stream = options.stream || process.stdout
-    , buffer = options.buffer;
 
-  // buffering support
-  if (buffer) {
-    var realStream = stream
-    var buf = []
-    var timer = null
-    var interval = 'number' == typeof buffer
-      ? buffer
-      : defaultBufferDuration
+  var emitter = options.emitter;
+  if (!emitter) {
+      var emitOpts = {};
+      emitOpts.address = options.address || '127.0.0.1';
+      emitOpts.port    = options.port    || 1222; // TODO: verify default lwes port
 
-    // flush function
-    var flush = function(){
-      timer = null
-
-      if (buf.length) {
-        realStream.write(buf.join(''));
-        buf.length = 0;
+      if (options.esf) {
+          emitOpts = options.esf;
       }
-    }
-
-    // swap the stream
-    stream = {
-      write: function(str){
-        if (timer === null) {
-          timer = setTimeout(flush, interval)
-        }
-
-        buf.push(str);
-      }
-    };
+      emitter = new liblwes.Emitter(emitOpts);
   }
 
   return function logger(req, res, next) {
-    req._startAt = process.hrtime();
-    req._startTime = new Date;
+    req._startAt       = process.hrtime();
+    req._startTime     = new Date;
     req._remoteAddress = req.connection && req.connection.remoteAddress;
 
     function logRequest(){
       res.removeListener('finish', logRequest);
       res.removeListener('close', logRequest);
       if (skip(req, res)) return;
-      var line = fmt(exports, req, res);
-      if (null == line) return;
-      stream.write(line + '\n');
+      var message = fmt(exports, req, res);
+      if (null == message) return;
+      emitter.emit(message);
     };
 
     // immediate
@@ -103,7 +81,6 @@ exports = module.exports = function logger(options) {
       res.on('finish', logRequest);
       res.on('close', logRequest);
     }
-
 
     next();
   };
@@ -117,13 +94,27 @@ exports = module.exports = function logger(options) {
  * @api private
  */
 
-function compile(fmt) {
-  fmt = fmt.replace(/"/g, '\\"');
-  var js = '  return "' + fmt.replace(/:([-\w]{2,})(?:\[([^\]]+)\])?/g, function(_, name, arg){
-    return '"\n    + (tokens["' + name + '"](req, res, "' + arg + '") || "-") + "';
-  }) + '";'
-  return new Function('tokens, req, res', js);
+function compile(values) {
+    var js = 'return {';
+
+    values.forEach(function(value) {
+        js += value.replace(/:([-\w]{2,})(?:\[([^\]]+)\])?/g, function(_, name, arg) {
+            var formattedName = name.replace('-', '_');
+
+            if (arg) {
+                formattedName += '_' + arg.replace('-', '_');
+            }
+            return '"' + formattedName + '": tokens["' + name + '"](req, res, "' + arg + '") || "-",';
+        });
+    });
+
+    js += '};';
+
+    return new Function('tokens, req, res', js);
 };
+
+// for testing
+exports._compile = compile;
 
 /**
  * Define a token function with the given `name`,
@@ -135,8 +126,8 @@ function compile(fmt) {
  * @api public
  */
 
-exports.token = function(name, fn) {
-  exports[name] = fn;
+exports.token = function(name, values) {
+  exports[name] = values;
   return this;
 };
 
@@ -144,7 +135,7 @@ exports.token = function(name, fn) {
  * Define a `fmt` with the given `name`.
  *
  * @param {String} name
- * @param {String|Function} fmt
+ * @param {Array|Function} fmt
  * @return {Object} exports for chaining
  * @api public
  */
@@ -158,36 +149,19 @@ exports.format = function(name, fmt){
  * Default format.
  */
 
-exports.format('default', ':remote-addr - - [:date] ":method :url HTTP/:http-version" :status :res[content-length] ":referrer" ":user-agent"');
+exports.format('default', [ ':remote-addr', ':date', ':method', ':url', ':http-version', ':status', ':response[content-length]', ':referrer', ':user-agent', ':response-time' ])
 
 /**
  * Short format.
  */
 
-exports.format('short', ':remote-addr - :method :url HTTP/:http-version :status :res[content-length] - :response-time ms');
+exports.format('short', [ ':remote-addr', ':method', ':url', ':http-version', ':status', ':response[content-length]', ':response-time' ])
 
 /**
  * Tiny format.
  */
 
-exports.format('tiny', ':method :url :status :res[content-length] - :response-time ms');
-
-/**
- * dev (colored)
- */
-
-exports.format('dev', function(tokens, req, res){
-  var color = 32; // green
-  var status = res.statusCode;
-
-  if (status >= 500) color = 31; // red
-  else if (status >= 400) color = 33; // yellow
-  else if (status >= 300) color = 36; // cyan
-
-  var fn = compile('\x1b[90m:method :url \x1b[' + color + 'm:status \x1b[90m:response-time ms - :res[content-length]\x1b[0m');
-
-  return fn(tokens, req, res);
-});
+exports.format('tiny', [ ':method', ':url', ':status', ':response[content-length]', ':response-time' ])
 
 /**
  * request url
@@ -271,7 +245,7 @@ exports.token('user-agent', function(req){
  * request header
  */
 
-exports.token('req', function(req, res, field){
+exports.token('request', function(req, res, field){
   return req.headers[field.toLowerCase()];
 });
 
@@ -279,7 +253,7 @@ exports.token('req', function(req, res, field){
  * response header
  */
 
-exports.token('res', function(req, res, field){
+exports.token('response', function(req, res, field){
   return (res._headers || {})[field.toLowerCase()];
 });
 
