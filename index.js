@@ -62,7 +62,7 @@ exports = module.exports = function logger(options) {
 
   // Mostly for testing, but can be used in passing an existing instance of
   // liblwes.Emitter
-  emitter = options.emitter || new Emitter(lwesOpts);
+  var emitter = options.emitter || new Emitter(lwesOpts);
 
   return function logger(req, res, next) {
     req._startAt       = process.hrtime();
@@ -75,9 +75,14 @@ exports = module.exports = function logger(options) {
       if (skip(req, res)) return;
       var message = fmt(exports, req, res);
       if (null == message) return;
-      emitter.emit({
-          type: emitType,
-          attributes: message
+
+      // deferring emit to nextTick has produced 50% more through put on
+      // 'hello world' benchmarks.
+      process.nextTick(function () {
+          emitter.emit({
+              type: emitType,
+              attributes: message
+          });
       });
     };
 
